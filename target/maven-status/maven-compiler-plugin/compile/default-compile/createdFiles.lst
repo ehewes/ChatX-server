@@ -1,1 +1,3 @@
+com/chatx/core/handlers/MessageHandler.class
+com/chatx/core/config/WebSocketConfig.class
 com/chatx/core/ChatXApplication.class
