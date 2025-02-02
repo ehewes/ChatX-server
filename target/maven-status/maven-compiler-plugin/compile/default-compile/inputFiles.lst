@@ -2,4 +2,7 @@
 /Users/ehewes/Documents/ChatX/ChatX-server/src/main/java/com/chatx/core/config/WebSocketConfig.java
 /Users/ehewes/Documents/ChatX/ChatX-server/src/main/java/com/chatx/core/handlers/MessageHandler.java
 /Users/ehewes/Documents/ChatX/ChatX-server/src/main/java/com/chatx/core/ChatXApplication.java
+/Users/ehewes/Documents/ChatX/ChatX-server/src/main/java/com/chatx/core/service/MessageService.java
+/Users/ehewes/Documents/ChatX/ChatX-server/src/main/java/com/chatx/core/repository/MessageRepository.java
 /Users/ehewes/Documents/ChatX/ChatX-server/src/main/java/com/chatx/core/handlers/ModelMessage.java
+/Users/ehewes/Documents/ChatX/ChatX-server/src/main/java/com/chatx/core/entity/Message.java

@@ -1,10 +1,9 @@
 package com.chatx.core.handlers;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.chatx.core.entity.Message;
+import com.chatx.core.repository.MessageRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketMessage;
@@ -12,7 +11,17 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Component
 public class MessageHandler extends TextWebSocketHandler {
+
+    @Autowired
+    private MessageRepository messageRepository;
 
     private final List<WebSocketSession> webSocketSessions = Collections.synchronizedList(new ArrayList<>());
     private final Map<WebSocketSession, String> userNames = Collections.synchronizedMap(new HashMap<>());
@@ -50,6 +59,14 @@ public class MessageHandler extends TextWebSocketHandler {
         }
 
         String updatedMessage = objectMapper.writeValueAsString(modelMessage);
+
+        // Save message to database
+        String route = session.getUri().getPath();
+        Message dbMessage = new Message();
+        dbMessage.setRoute(route);
+        dbMessage.setUsername(userName);
+        dbMessage.setContent(modelMessage.getMessage());
+        messageRepository.save(dbMessage);
 
         for (WebSocketSession webSocketSession : webSocketSessions) {
             if (session == webSocketSession) continue;

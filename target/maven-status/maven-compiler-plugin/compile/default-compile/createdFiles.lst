@@ -1,5 +1,8 @@
 com/chatx/core/handlers/ModelMessage.class
+com/chatx/core/entity/Message.class
+com/chatx/core/controller/MessageController.class
+com/chatx/core/repository/MessageRepository.class
+com/chatx/core/service/MessageService.class
 com/chatx/core/handlers/MessageHandler.class
 com/chatx/core/config/WebSocketConfig.class
-com/chatx/core/controller/MessageController.class
 com/chatx/core/ChatXApplication.class
