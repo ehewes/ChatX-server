@@ -2,75 +2,91 @@ package com.chatx.core.handlers;
 
 import com.chatx.core.entity.Message;
 import com.chatx.core.repository.MessageRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class MessageHandler extends TextWebSocketHandler {
 
-    @Autowired
-    private MessageRepository messageRepository;
+    private final MessageRepository messageRepository;
+    private final ObjectMapper objectMapper;
+    private final Map<WebSocketSession, String> sessions = new ConcurrentHashMap<>();
 
-    private final List<WebSocketSession> webSocketSessions = Collections.synchronizedList(new ArrayList<>());
-    private final Map<WebSocketSession, String> userNames = Collections.synchronizedMap(new HashMap<>());
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    public MessageHandler(MessageRepository messageRepository, ObjectMapper objectMapper) {
+        this.messageRepository = messageRepository;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        super.afterConnectionEstablished(session);
-        System.out.println(session.getId() + " Connected");
-        webSocketSessions.add(session);
+        sessions.put(session, "Anonymous");
+        System.out.println("New connection: " + session.getId());
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        super.afterConnectionClosed(session, status);
-        System.out.println(session.getId() + " Disconnected");
-        webSocketSessions.remove(session);
-        userNames.remove(session);
+        sessions.remove(session);
+        System.out.println("Disconnected: " + session.getId());
     }
 
     @Override
-    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        super.handleMessage(session, message);
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        try {
+            System.out.println("Received message: " + message.getPayload());
+            ModelMessage incoming = objectMapper.readValue(message.getPayload(), ModelMessage.class);
 
-        String payload = message.getPayload().toString();
-        ModelMessage modelMessage = objectMapper.readValue(payload, ModelMessage.class);
+            // Update username if provided
+            if (incoming.getName() != null && !incoming.getName().isEmpty()) {
+                sessions.put(session, incoming.getName());
+            }
 
-        if (modelMessage.getName() != null) {
-            userNames.put(session, modelMessage.getName());
+            // Check if content is present
+            if (incoming.getMessage() == null || incoming.getMessage().trim().isEmpty()) {
+                System.out.println("Message content is null or empty, ignoring message.");
+                return;
+            }
+
+            // Prepare message to save
+            Message dbMessage = new Message();
+            dbMessage.setUsername(sessions.get(session));
+            dbMessage.setContent(incoming.getMessage());
+            dbMessage.setRoute(session.getUri().getPath());
+            dbMessage.setCreatedAt(LocalDateTime.now());
+
+            // Save to database
+            messageRepository.save(dbMessage);
+
+            // Prepare response
+            ModelMessage outgoing = new ModelMessage();
+            outgoing.setName(sessions.get(session));
+            outgoing.setMessage(incoming.getMessage());
+
+            // Broadcast to all connected clients
+            broadcastMessage(outgoing);
+
+        } catch (IOException e) {
+            System.err.println("Error processing message: " + e.getMessage());
+            session.close(CloseStatus.SERVER_ERROR);
         }
+    }
 
-        String userName = userNames.get(session);
-        if (userName != null) {
-            modelMessage.setName(userName);
-        }
-
-        String updatedMessage = objectMapper.writeValueAsString(modelMessage);
-
-        // Save message to database
-        String route = session.getUri().getPath();
-        Message dbMessage = new Message();
-        dbMessage.setRoute(route);
-        dbMessage.setUsername(userName);
-        dbMessage.setContent(modelMessage.getMessage());
-        messageRepository.save(dbMessage);
-
-        for (WebSocketSession webSocketSession : webSocketSessions) {
-            if (session == webSocketSession) continue;
-            webSocketSession.sendMessage(new TextMessage(updatedMessage));
+    private void broadcastMessage(ModelMessage message) throws IOException {
+        String json = objectMapper.writeValueAsString(message);
+        for (WebSocketSession session : sessions.keySet()) {
+            if (session.isOpen()) {
+                session.sendMessage(new TextMessage(json));
+            }
         }
     }
 }

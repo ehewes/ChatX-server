@@ -3,14 +3,14 @@ package com.chatx.core.handlers;
 public class ModelMessage {
 
     private String name;
-    private String message;
+    private String content;
 
     public ModelMessage() {
     }
 
-    public ModelMessage(String name, String message) {
+    public ModelMessage(String name, String content) {
         this.name = name;
-        this.message = message;
+        this.content = content;
     }
 
     public String getName() {
@@ -22,10 +22,10 @@ public class ModelMessage {
     }
 
     public String getMessage() {
-        return message;
+        return content;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setMessage(String content) {
+        this.content = content;
     }
 }
