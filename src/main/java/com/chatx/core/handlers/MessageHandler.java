@@ -5,6 +5,7 @@ import com.chatx.core.repository.MessageRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -41,17 +42,17 @@ public class MessageHandler extends TextWebSocketHandler {
     }
 
     @Override
+    @Transactional
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         try {
-            System.out.println("Received message: " + message.getPayload());
-            ModelMessage incoming = objectMapper.readValue(message.getPayload(), ModelMessage.class);
+            String payload = message.getPayload();
+            System.out.println("Received message: " + payload);
+            ModelMessage incoming = objectMapper.readValue(payload, ModelMessage.class);
 
-            // Update username if provided
             if (incoming.getName() != null && !incoming.getName().isEmpty()) {
                 sessions.put(session, incoming.getName());
             }
 
-            // Check if content is present
             if (incoming.getMessage() == null || incoming.getMessage().trim().isEmpty()) {
                 System.out.println("Message content is null or empty, ignoring message.");
                 return;
